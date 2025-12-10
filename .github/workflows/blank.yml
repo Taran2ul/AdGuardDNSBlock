@@ -1,0 +1,36 @@
+name: Weekly download hosts file
+
+on:
+  schedule:
+    - cron: '0 0 * * 0'   # каждое воскресенье в 00:00 UTC
+  workflow_dispatch:       # запуск вручную
+
+jobs:
+  download:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout target repo
+        uses: actions/checkout@v3
+
+      - name: Download hosts file
+        run: |
+          curl -L https://raw.githubusercontent.com/ImMALWARE/dns.malw.link/master/hosts -o hosts.new
+
+      - name: Check for changes
+        run: |
+          if [ -f hosts ]; then
+            if cmp -s hosts hosts.new; then
+              echo "No changes in hosts file"
+              exit 0
+            fi
+          fi
+          mv hosts.new hosts
+
+      - name: Commit and push updated hosts file
+        if: success()   # выполняется только если файл изменился
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add hosts
+          git commit -m "Weekly update of hosts file"
+          git push
