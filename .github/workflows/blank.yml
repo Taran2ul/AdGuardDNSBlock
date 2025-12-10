@@ -14,23 +14,27 @@ jobs:
 
       - name: Download hosts file
         run: |
-          curl -L https://raw.githubusercontent.com/ImMALWARE/dns.malw.link/master/hosts -o hosts.new
+          curl -L https://raw.githubusercontent.com/ImMALWARE/dns.malw.link/master/hosts -o hosts.raw
+    
+      - name: Process hosts file (remove empty lines and comments)
+        run: |
+          grep -vE '^\s*$|^\s*#' hosts.raw > hosts
 
       - name: Check for changes
         run: |
-          if [ -f hosts ]; then
-            if cmp -s hosts hosts.new; then
-              echo "No changes in hosts file"
+          if [ -f hosts.old ]; then
+            if cmp -s hosts hosts.old; then
+              echo "No changes in processed hosts file"
               exit 0
             fi
           fi
-          mv hosts.new hosts
+          cp hosts hosts.old
 
       - name: Commit and push updated hosts file
         if: success()   # выполняется только если файл изменился
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
-          git add hosts
+          git add hosts hosts.old
           git commit -m "Weekly update of hosts file"
           git push
