@@ -1,4 +1,4 @@
-name: Weekly download hosts file
+name: Weekly download and process hosts file
 
 on:
   schedule:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:       # запуск вручную
 
 jobs:
-  download:
+  process:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout target repo
@@ -15,10 +15,14 @@ jobs:
       - name: Download hosts file
         run: |
           curl -L https://raw.githubusercontent.com/ImMALWARE/dns.malw.link/master/hosts -o hosts.raw
-    
-      - name: Process hosts file (remove empty lines and comments)
+
+      - name: Clean hosts file (remove comments and empty lines)
         run: |
-          grep -vE '^\s*$|^\s*#' hosts.raw > hosts
+          sed '/^\s*#/d' hosts.raw | sed 's/[[:space:]]#.*$//' | sed '/^\s*$/d' > hosts.cleaned
+
+      - name: Transform hosts file to AdGuard format
+        run: |
+          awk '{print "||"$2"^$dnsrewrite="$1}' hosts.cleaned > hosts
 
       - name: Check for changes
         run: |
@@ -31,10 +35,10 @@ jobs:
           cp hosts hosts.old
 
       - name: Commit and push updated hosts file
-        if: success()   # выполняется только если файл изменился
+        if: success()
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
           git add hosts hosts.old
-          git commit -m "Weekly update of hosts file"
+          git commit -m "Weekly AdGuard DNS rewrite hosts update"
           git push
