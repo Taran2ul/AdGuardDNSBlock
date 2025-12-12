@@ -1,0 +1,41 @@
+name: Process file hostsgreeshan
+
+on:
+  push:
+    paths:
+      - "hostsgreeshan"   # запуск при изменении исходного файла
+  workflow_dispatch:       # запуск вручную
+
+jobs:
+  process:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Clean hosts file (remove comments and empty lines)
+        run: |
+          sed '/^\s*#/d' hostsgreeshan | sed 's/[[:space:]]#.*$//' | sed '/^\s*$/d' > hosts.cleaned
+
+      - name: Transform hosts file to AdGuard format
+        run: |
+          awk '{print "||"$2"^$dnsrewrite="$1}' hosts.cleaned > hostsalx
+
+      - name: Check for changes
+        run: |
+          if [ -f hostsalx.old ]; then
+            if cmp -s hostsalx hostsalx.old; then
+              echo "No changes in processed hosts file"
+              exit 0
+            fi
+          fi
+          cp hostsalx hostsalx.old
+
+      - name: Commit and push updated hostsalx
+        if: success()
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add hostsalx hostsalx.old
+          git commit -m "Update hostsalx from hostsgreeshan"
+          git push
