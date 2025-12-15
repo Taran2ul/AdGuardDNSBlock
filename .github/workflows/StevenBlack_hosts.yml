@@ -16,9 +16,19 @@ jobs:
         run: |
           curl -L --fail https://raw.githubusercontent.com/StevenBlack/hosts/master/alternates/fakenews-gambling-porn/hosts -o hostsSB.raw
 
-      - name: Clean hosts file (remove comments and empty lines)
+      - name: Clean hosts file (remove comments, empty lines, and system entries)
         run: |
-          sed '/^\s*#/d' hostsSB.raw | sed 's/[[:space:]]#.*$//' | sed '/^\s*$/d' > hostsSB.cleaned
+          sed '/^\s*#/d; s/[[:space:]]#.*$//; /^\s*$/d' hostsSB.raw \
+          | grep -v -E '^(127\.0\.0\.1[[:space:]]+(localhost|localhost\.localdomain|local))$' \
+          | grep -v -E '^(255\.255\.255\.255[[:space:]]+broadcasthost)$' \
+          | grep -v -E '^(::1[[:space:]]+(localhost|ip6-localhost|ip6-loopback))$' \
+          | grep -v -E '^(fe80::1%lo0[[:space:]]+localhost)$' \
+          | grep -v -E '^(ff00::0[[:space:]]+(ip6-localnet|ip6-mcastprefix))$' \
+          | grep -v -E '^(ff02::1[[:space:]]+ip6-allnodes)$' \
+          | grep -v -E '^(ff02::2[[:space:]]+ip6-allrouters)$' \
+          | grep -v -E '^(ff02::3[[:space:]]+ip6-allhosts)$' \
+          | grep -v -E '^(0\.0\.0\.0[[:space:]]+0\.0\.0\.0)$' \
+          > hostsSB.cleaned
 
       - name: Transform hosts file to AdGuard format
         run: |
