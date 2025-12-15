@@ -1,0 +1,44 @@
+name: Weekly download and process StevenBlack hosts file
+
+on:
+  schedule:
+    - cron: '0 0 * * 0'   # каждое воскресенье в 00:00 UTC
+  workflow_dispatch:       # запуск вручную
+
+jobs:
+  process:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout target repo
+        uses: actions/checkout@v3
+
+      - name: Download hosts file
+        run: |
+          curl -L --fail https://raw.githubusercontent.com/StevenBlack/hosts/master/alternates/fakenews-gambling-porn/hosts -o hostsSB.raw
+
+      - name: Clean hosts file (remove comments and empty lines)
+        run: |
+          sed '/^\s*#/d' hostsSB.raw | sed 's/[[:space:]]#.*$//' | sed '/^\s*$/d' > hostsSB.cleaned
+
+      - name: Transform hosts file to AdGuard format
+        run: |
+          awk 'NF==2 {print "||"$2"^$dnsrewrite="$1}' hostsSB.cleaned > hostsalx
+
+      - name: Check for changes
+        run: |
+          if git diff --quiet -- hostsalx; then
+            echo "No changes in processed hosts file"
+            exit 0
+          fi
+
+      - name: Commit and push updated hosts file
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add hostsalx
+          git diff --cached --quiet || git commit -m "Weekly AdGuard DNS rewrite StevenBlack hosts update"
+          git push
+
+      - name: Cleanup temporary files
+        run: |
+          rm -f hostsSB.raw hostsSB.cleaned
