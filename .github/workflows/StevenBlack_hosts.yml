@@ -14,7 +14,7 @@ jobs:
 
       - name: Download hosts file
         run: |
-          curl -L --fail https://raw.githubusercontent.com/StevenBlack/hosts/master/alternates/fakenews-gambling-porn/hosts -o hostsSB.raw
+          curl -L --fail https://raw.githubusercontent.com/StevenBlack/hosts/master/alternates/fakenews-gambling/hosts -o hostsSB.raw
 
       - name: Clean hosts file (remove comments, empty lines, and system entries)
         run: |
